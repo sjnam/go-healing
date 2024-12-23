@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"slices"
 	"time"
 )
 
@@ -17,7 +18,7 @@ func DoWork(
 
 		time.Sleep(2 * time.Second)
 
-		for _, n := range nums {
+		for n := range slices.Values(nums) {
 			select {
 			case heartbeat <- struct{}{}:
 			default:
