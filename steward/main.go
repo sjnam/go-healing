@@ -77,7 +77,6 @@ func randStringFn(
 		heartbeat := make(chan interface{})
 		tmStream := make(chan string, 10)
 		go func() {
-			defer close(heartbeat)
 			defer close(tmStream)
 
 			select {

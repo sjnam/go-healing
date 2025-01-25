@@ -36,5 +36,6 @@ func ExampleNewSteward() {
 	// ward: Hello, I'm irresponsible!
 	// ward: I am halting.
 	// main: halting steward and ward.
+	// ward: I am halting.
 	// Done
 }

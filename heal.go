@@ -16,7 +16,7 @@ func or(ctxs ...context.Context) context.Context {
 		return ctxs[0]
 	}
 
-	orCtx, cancel := context.WithCancel(context.TODO())
+	orCtx, cancel := context.WithCancel(ctxs[0])
 	go func() {
 		defer cancel()
 		switch len(ctxs) {
@@ -55,7 +55,7 @@ func NewSteward(
 				wardHeartbeat <-chan interface{}
 			)
 			startWard := func() {
-				wardCtx, wardCancel = context.WithCancel(context.TODO())
+				wardCtx, wardCancel = context.WithCancel(ctx)
 				wardHeartbeat = startGoroutine(or(ctx, wardCtx), timeout/2)
 			}
 			startWard()
@@ -70,10 +70,8 @@ func NewSteward(
 					case heartbeat <- struct{}{}:
 					default:
 					}
-				case _, ok := <-wardHeartbeat:
-					if ok {
-						goto monitorLoop
-					}
+				case <-wardHeartbeat:
+					goto monitorLoop
 				case <-timeoutSignal:
 					log.Println("steward: ward unhealthy; restarting")
 					wardCancel()
