@@ -21,54 +21,6 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-func orDone[T any](ctx context.Context, c <-chan T) <-chan T {
-	ch := make(chan T)
-	go func() {
-		defer close(ch)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case v, ok := <-c:
-				if !ok {
-					return
-				}
-				select {
-				case ch <- v:
-				case <-ctx.Done():
-				}
-			}
-		}
-	}()
-	return ch
-}
-
-func bridge[T any](ctx context.Context, chch <-chan <-chan T) <-chan T {
-	vch := make(chan T)
-	go func() {
-		defer close(vch)
-		for {
-			var ch <-chan T
-			select {
-			case tmp, ok := <-chch:
-				if !ok {
-					return
-				}
-				ch = tmp
-			case <-ctx.Done():
-				return
-			}
-			for val := range orDone(ctx, ch) {
-				select {
-				case vch <- val:
-				case <-ctx.Done():
-				}
-			}
-		}
-	}()
-	return vch
-}
-
 func randStringFn(
 	ctx context.Context,
 ) (heal.StartGoroutineFn, <-chan string) {
@@ -120,7 +72,7 @@ func randStringFn(
 			}
 		}()
 		return heartbeat
-	}, bridge(ctx, tmChanStream)
+	}, heal.Bridge(ctx, tmChanStream)
 	// bridge channel 덕분에 intChanStream의 공급원인 ward가 계속
 	// 변하지만 intChanStream을 통해서 지속적으로 값을 보낼 수 있다.
 }
