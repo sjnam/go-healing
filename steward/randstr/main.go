@@ -21,13 +21,13 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-func randStringFn(
-	ctx context.Context,
-) (heal.StartGoroutineFn, <-chan string) {
+func randStringFn(ctx context.Context) (heal.StartGoroutineFn, <-chan string) {
 	tmChanStream := make(chan (<-chan string))
+
 	return func(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
 		heartbeat := make(chan interface{})
 		tmStream := make(chan string)
+
 		go func() {
 			defer close(tmStream)
 
@@ -71,6 +71,7 @@ func randStringFn(
 				}
 			}
 		}()
+
 		return heartbeat
 	}, heal.Bridge(ctx, tmChanStream)
 	// Thanks to the bridge channel, we can continue to send values through the tmChanStream
@@ -85,10 +86,9 @@ func main() {
 	time.AfterFunc(30*time.Second, func() { cancel() })
 
 	doWork, stream := randStringFn(ctx)
-	steward := heal.NewSteward(time.Second /*timeout*/, doWork)
-
+	doWorkWithSteward := heal.NewSteward(time.Second /*timeout*/, doWork)
 	// We don't need to listen to the heartbeat because we're checking the stream.
-	steward(ctx, time.Hour)
+	doWorkWithSteward(ctx, time.Hour)
 
 	for val := range stream {
 		log.Println(val)

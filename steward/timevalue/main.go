@@ -3,19 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/sjnam/heal"
 )
 
-func timeStringFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan string) {
+func doWorkFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan string) {
 	tmChanStream := make(chan (<-chan string))
+
 	return func(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
 		heartbeat := make(chan interface{})
 		tmStream := make(chan string)
+
 		go func() {
 			defer close(tmStream)
 
@@ -51,7 +51,7 @@ func timeStringFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan
 			}
 
 			var loc *time.Location
-			if tz == "" {
+			if tz != "" {
 				loc, _ = time.LoadLocation(tz)
 			} else {
 				loc = time.Local
@@ -70,6 +70,7 @@ func timeStringFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan
 				}
 			}
 		}()
+
 		return heartbeat
 	}, heal.Bridge(ctx, tmChanStream)
 	// Thanks to the bridge channel, we can continue to send values through the tmChanStream
@@ -77,18 +78,14 @@ func timeStringFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan
 }
 
 func main() {
-	log.SetOutput(os.Stdout)
-	log.SetFlags(log.Ltime)
-
 	ctx, cancel := context.WithCancel(context.TODO())
 	time.AfterFunc(30*time.Second, func() { cancel() })
 
-	doWork, tmValueStream := timeStringFn(ctx, "Asia/Seoul")
-	steward := heal.NewSteward(500*time.Millisecond /*timeout*/, doWork)
+	doWork, stream := doWorkFn(ctx, "Asia/Seoul")
+	doWorkWithSteward := heal.NewSteward(500*time.Millisecond /*timeout*/, doWork)
+	doWorkWithSteward(ctx, time.Hour)
 
-	steward(ctx, time.Hour)
-
-	for val := range tmValueStream {
+	for val := range stream {
 		fmt.Println(val)
 	}
 
