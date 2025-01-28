@@ -28,7 +28,7 @@ func timeStringFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan
 			pulse := time.Tick(pulseInterval)
 			workGen := time.Tick(1 * time.Second)
 
-			errPulse := time.After(time.Duration(rand.Intn(20)) * time.Second)
+			errPulse := time.After(time.Duration(1+rand.Intn(10)) * time.Second)
 
 			sendPulse := func() {
 				select {
@@ -82,13 +82,12 @@ func main() {
 	time.AfterFunc(30*time.Second, func() { cancel() })
 
 	const timeout = 500 * time.Millisecond
-	doWork, stream := timeStringFn(ctx, "Asia/Singapore")
+	doWork, tmValueStream := timeStringFn(ctx, "Asia/Seoul")
 	steward := heal.NewSteward(timeout, doWork)
 
-	// stream을 체크하고 있기 때문에 heartbeat를 듣고 있을 필요가 없다.
-	steward(ctx, 1*time.Hour)
+	steward(ctx, time.Hour)
 
-	for val := range stream {
+	for val := range tmValueStream {
 		fmt.Println(val)
 	}
 

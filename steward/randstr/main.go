@@ -89,7 +89,7 @@ func main() {
 	steward := heal.NewSteward(timeout, doWork)
 
 	// stream을 체크하고 있기 때문에 heartbeat를 듣고 있을 필요가 없다.
-	steward(ctx, 1*time.Hour)
+	steward(ctx, time.Hour)
 
 	for val := range stream {
 		log.Println(val)
