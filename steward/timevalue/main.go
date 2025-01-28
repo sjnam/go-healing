@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/sjnam/heal"
@@ -79,15 +82,28 @@ func doWorkFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan str
 
 func main() {
 	ctx, cancel := context.WithCancel(context.TODO())
-	time.AfterFunc(30*time.Second, func() { cancel() })
+	time.AfterFunc(30*time.Second, func() {
+		log.Println("main: halting steward and ward.")
+		cancel()
+	})
 
-	doWork, stream := doWorkFn(ctx, "Asia/Seoul")
-	doWorkWithSteward := heal.NewSteward(500*time.Millisecond /*timeout*/, doWork)
-	doWorkWithSteward(ctx, time.Hour)
+	var wg sync.WaitGroup
+	for _, tz := range []string{"Asia/Seoul", "Asia/Singapore", "America/Buenos_Aires", "Europe/London", "Australia/Sydney", "Africa/Cairo"} {
+		wg.Add(1)
+		go func(tz string) {
+			defer wg.Done()
 
-	for val := range stream {
-		fmt.Println(val)
+			doWork, stream := doWorkFn(ctx, tz)
+			doWorkWithSteward := heal.NewSteward(time.Second /*timeout*/, doWork)
+			doWorkWithSteward(ctx, time.Hour)
+
+			city := tz[strings.LastIndex(tz, "/")+1:]
+			for val := range stream {
+				fmt.Printf("%s:\t%s\n", city, val)
+			}
+		}(tz)
 	}
+	wg.Wait()
 
 	fmt.Println("done")
 }
