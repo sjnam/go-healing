@@ -35,7 +35,7 @@ func doWorkFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan str
 
 			sendPulse := func() {
 				select {
-				case heartbeat <- struct{}{}:
+				case heartbeat <- tz:
 				default:
 				}
 			}
@@ -80,6 +80,16 @@ func doWorkFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan str
 	// even if the ward that is the source of the tmChanStream keeps changing.
 }
 
+func checkHeartbeat(hb interface{}) bool {
+	tz, ok := hb.(string)
+	if !ok {
+		return false
+	}
+
+	fmt.Printf("checkHeartbeatFn: %s\n", tz)
+	return true
+}
+
 func main() {
 	ctx, cancel := context.WithCancel(context.TODO())
 	time.AfterFunc(30*time.Second, func() {
@@ -94,7 +104,7 @@ func main() {
 			defer wg.Done()
 
 			doWork, stream := doWorkFn(ctx, tz)
-			doWorkWithSteward := heal.NewSteward(time.Second /*timeout*/, doWork)
+			doWorkWithSteward := heal.NewSteward(time.Second /*timeout*/, doWork, checkHeartbeat)
 			doWorkWithSteward(ctx, time.Hour)
 
 			city := tz[strings.LastIndex(tz, "/")+1:]

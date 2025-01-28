@@ -6,9 +6,17 @@ import (
 	"time"
 )
 
-type StartGoroutineFn func(context.Context, time.Duration) <-chan interface{}
+type (
+	checkHeartbeatFn func(interface{}) bool
+	StartGoroutineFn func(context.Context, time.Duration) <-chan interface{}
+)
 
-func NewSteward(timeout time.Duration, startGoroutine StartGoroutineFn) StartGoroutineFn {
+func NewSteward(timeout time.Duration, startGoroutine StartGoroutineFn, checkHeartbeat ...checkHeartbeatFn) StartGoroutineFn {
+	chkhb := func(interface{}) bool { return true }
+	if len(checkHeartbeat) == 1 {
+		chkhb = checkHeartbeat[0]
+	}
+
 	return func(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
 		heartbeat := make(chan interface{})
 		go func() {
@@ -35,7 +43,12 @@ func NewSteward(timeout time.Duration, startGoroutine StartGoroutineFn) StartGor
 					case heartbeat <- struct{}{}:
 					default:
 					}
-				case <-wardHeartbeat:
+				case hb := <-wardHeartbeat:
+					if !chkhb(hb) {
+						log.Println("steward: ward unhealthy; restarting")
+						wardCancel()
+						startWard()
+					}
 					goto monitorLoop
 				case <-timeoutSignal:
 					log.Println("steward: ward unhealthy; restarting")
