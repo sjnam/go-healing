@@ -27,7 +27,7 @@ func randStringFn(
 	tmChanStream := make(chan (<-chan string))
 	return func(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
 		heartbeat := make(chan interface{})
-		tmStream := make(chan string, 10)
+		tmStream := make(chan string)
 		go func() {
 			defer close(tmStream)
 
@@ -73,8 +73,8 @@ func randStringFn(
 		}()
 		return heartbeat
 	}, heal.Bridge(ctx, tmChanStream)
-	// bridge channel 덕분에 intChanStream의 공급원인 ward가 계속
-	// 변하지만 intChanStream을 통해서 지속적으로 값을 보낼 수 있다.
+	// Thanks to the bridge channel, we can continue to send values through the tmChanStream
+	// even if the ward that is the source of the tmChanStream keeps changing.
 }
 
 func main() {
@@ -84,11 +84,10 @@ func main() {
 	ctx, cancel := context.WithCancel(context.TODO())
 	time.AfterFunc(30*time.Second, func() { cancel() })
 
-	const timeout = 1 * time.Second
 	doWork, stream := randStringFn(ctx)
-	steward := heal.NewSteward(timeout, doWork)
+	steward := heal.NewSteward(time.Second /*timeout*/, doWork)
 
-	// stream을 체크하고 있기 때문에 heartbeat를 듣고 있을 필요가 없다.
+	// We don't need to listen to the heartbeat because we're checking the stream.
 	steward(ctx, time.Hour)
 
 	for val := range stream {

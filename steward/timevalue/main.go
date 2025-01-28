@@ -15,7 +15,7 @@ func timeStringFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan
 	tmChanStream := make(chan (<-chan string))
 	return func(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
 		heartbeat := make(chan interface{})
-		tmStream := make(chan string, 10)
+		tmStream := make(chan string)
 		go func() {
 			defer close(tmStream)
 
@@ -50,9 +50,11 @@ func timeStringFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan
 				}
 			}
 
-			loc, err := time.LoadLocation(tz)
-			if err != nil {
-				panic(err)
+			var loc *time.Location
+			if tz == "" {
+				loc, _ = time.LoadLocation(tz)
+			} else {
+				loc = time.Local
 			}
 
 			for {
@@ -70,8 +72,8 @@ func timeStringFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan
 		}()
 		return heartbeat
 	}, heal.Bridge(ctx, tmChanStream)
-	// bridge channel 덕분에 tmChanStream의 공급원인 ward가 계속
-	// 변하지만 tmChanStream을 통해서 지속적으로 값을 보낼 수 있다.
+	// Thanks to the bridge channel, we can continue to send values through the tmChanStream
+	// even if the ward that is the source of the tmChanStream keeps changing.
 }
 
 func main() {
@@ -81,9 +83,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.TODO())
 	time.AfterFunc(30*time.Second, func() { cancel() })
 
-	const timeout = 500 * time.Millisecond
 	doWork, tmValueStream := timeStringFn(ctx, "Asia/Seoul")
-	steward := heal.NewSteward(timeout, doWork)
+	steward := heal.NewSteward(500*time.Millisecond /*timeout*/, doWork)
 
 	steward(ctx, time.Hour)
 
