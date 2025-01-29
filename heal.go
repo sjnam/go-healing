@@ -53,13 +53,13 @@ func NewSteward(
 					}
 				case hb, ok := <-wardHeartbeat:
 					if !ok || !chkhb(hb) {
-						log.Println("\033[36msteward: invalid heartbeat; restarting\033[0m")
+						log.Println("\033[31msteward: invalid heartbeat; restarting\033[0m")
 						wardCancel()
 						startWard()
 					}
 					goto monitorLoop
 				case <-timeoutSignal:
-					log.Println("\033[36msteward: ward unhealthy; restarting\033[0m")
+					log.Println("\033[31msteward: ward unhealthy; restarting\033[0m")
 					wardCancel()
 					startWard()
 					goto monitorLoop

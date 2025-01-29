@@ -76,7 +76,7 @@ func doWorkFn(
 				case <-workGen:
 					sendResult(time.Now().In(loc).Format(time.RFC3339))
 				case <-errPulse:
-					log.Println("\033[33mward: simulating error.\033[0m")
+					log.Println("\033[33mward: simulating error\033[0m")
 					return
 				}
 			}
@@ -92,7 +92,7 @@ func checkHeartbeat(hb interface{}) bool {
 		return false
 	}
 
-	log.Printf("heartbeat: %s\n", tz)
+	log.Printf("\033[36mheartbeat: %s\033[0m", tz)
 
 	return true
 }
@@ -103,7 +103,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	time.AfterFunc(20*time.Second, func() {
-		log.Println("\033[36mmain: halting steward and ward.\033[0m")
+		log.Println("\033[31mmain: halting steward and ward\033[0m")
 		cancel()
 	})
 
