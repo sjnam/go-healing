@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -76,6 +77,7 @@ func doWorkFn(
 				case <-workGen:
 					sendResult(time.Now().In(loc).Format(time.RFC3339))
 				case <-errPulse:
+					log.Println("ward: simulating error")
 					return
 				}
 			}
@@ -97,6 +99,9 @@ func checkHeartbeat(hb interface{}) bool {
 }
 
 func main() {
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.Ltime)
+
 	ctx, cancel := context.WithCancel(context.TODO())
 
 	time.AfterFunc(30*time.Second, func() {
