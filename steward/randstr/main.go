@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -85,7 +84,10 @@ func main() {
 	log.SetFlags(log.Ltime)
 
 	ctx, cancel := context.WithCancel(context.TODO())
-	time.AfterFunc(30*time.Second, func() { cancel() })
+	time.AfterFunc(30*time.Second, func() {
+		log.Println("main: halting steward and ward.")
+		cancel()
+	})
 
 	doWork, stream := randStringFn(ctx)
 	doWorkWithSteward := heal.NewSteward(time.Second /*timeout*/, doWork)
@@ -95,5 +97,5 @@ func main() {
 		log.Println(val)
 	}
 
-	fmt.Println("done")
+	log.Println("done")
 }

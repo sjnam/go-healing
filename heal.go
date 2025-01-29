@@ -39,6 +39,7 @@ func NewSteward(
 				wardHeartbeat = startGoroutine(or(ctx, wardCtx), timeout/2)
 			}
 			startWard()
+
 			pulse := time.Tick(pulseInterval)
 
 		monitorLoop:
@@ -52,13 +53,13 @@ func NewSteward(
 					}
 				case hb, ok := <-wardHeartbeat:
 					if !ok || !chkhb(hb) {
-						log.Println("steward: invalid heartbeat; restarting")
+						log.Println("\033[36msteward: invalid heartbeat; restarting\033[0m")
 						wardCancel()
 						startWard()
 					}
 					goto monitorLoop
 				case <-timeoutSignal:
-					log.Println("steward: ward unhealthy; restarting")
+					log.Println("\033[36msteward: ward unhealthy; restarting\033[0m")
 					wardCancel()
 					startWard()
 					goto monitorLoop

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -39,7 +38,7 @@ func doWorkFn(
 			pulse := time.Tick(pulseInterval)
 			workGen := time.Tick(1 * time.Second)
 
-			errPulse := time.After(time.Duration(1+rand.Intn(10)) * time.Second)
+			errPulse := time.After(time.Duration(1+rand.Intn(5)) * time.Second)
 
 			sendPulse := func() {
 				select {
@@ -77,7 +76,7 @@ func doWorkFn(
 				case <-workGen:
 					sendResult(time.Now().In(loc).Format(time.RFC3339))
 				case <-errPulse:
-					log.Println("ward: simulating error")
+					log.Println("\033[33mward: simulating error.\033[0m")
 					return
 				}
 			}
@@ -103,9 +102,8 @@ func main() {
 	log.SetFlags(log.Ltime)
 
 	ctx, cancel := context.WithCancel(context.TODO())
-
-	time.AfterFunc(30*time.Second, func() {
-		log.Println("main: halting steward and ward.")
+	time.AfterFunc(20*time.Second, func() {
+		log.Println("\033[36mmain: halting steward and ward.\033[0m")
 		cancel()
 	})
 
@@ -120,7 +118,7 @@ func main() {
 		"Africa/Cairo",
 	} {
 		wg.Add(1)
-		go func(tz string) {
+		go func() {
 			defer wg.Done()
 
 			doWork, stream := doWorkFn(ctx, tz)
@@ -129,11 +127,11 @@ func main() {
 
 			city := tz[strings.LastIndex(tz, "/")+1:]
 			for val := range stream {
-				fmt.Printf("%s:\t%s\n", city, val)
+				log.Printf("%s: %s", city, val)
 			}
-		}(tz)
+		}()
 	}
 	wg.Wait()
 
-	fmt.Println("done")
+	log.Println("done")
 }
