@@ -11,13 +11,20 @@ type (
 	StartGoroutineFn func(context.Context, time.Duration) <-chan interface{}
 )
 
-func NewSteward(timeout time.Duration, startGoroutine StartGoroutineFn, checkHeartbeat ...checkHeartbeatFn) StartGoroutineFn {
+func NewSteward(
+	timeout time.Duration,
+	startGoroutine StartGoroutineFn,
+	checkHeartbeat ...checkHeartbeatFn,
+) StartGoroutineFn {
 	chkhb := func(interface{}) bool { return true }
 	if len(checkHeartbeat) == 1 {
 		chkhb = checkHeartbeat[0]
 	}
 
-	return func(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
+	return func(
+		ctx context.Context,
+		pulseInterval time.Duration,
+	) <-chan interface{} {
 		heartbeat := make(chan interface{})
 		go func() {
 			defer close(heartbeat)

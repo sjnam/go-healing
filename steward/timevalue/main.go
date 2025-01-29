@@ -12,10 +12,16 @@ import (
 	"github.com/sjnam/heal"
 )
 
-func doWorkFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan string) {
+func doWorkFn(
+	ctx context.Context,
+	tz string,
+) (heal.StartGoroutineFn, <-chan string) {
 	tmChanStream := make(chan (<-chan string))
 
-	return func(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
+	return func(
+		ctx context.Context,
+		pulseInterval time.Duration,
+	) <-chan interface{} {
 		heartbeat := make(chan interface{})
 		tmStream := make(chan string)
 
@@ -77,8 +83,6 @@ func doWorkFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan str
 
 		return heartbeat
 	}, heal.Bridge(ctx, tmChanStream)
-	// Thanks to the bridge channel, we can continue to send values through the tmChanStream
-	// even if the ward that is the source of the tmChanStream keeps changing.
 }
 
 func checkHeartbeat(hb interface{}) bool {
@@ -94,19 +98,28 @@ func checkHeartbeat(hb interface{}) bool {
 
 func main() {
 	ctx, cancel := context.WithCancel(context.TODO())
+
 	time.AfterFunc(30*time.Second, func() {
 		log.Println("main: halting steward and ward.")
 		cancel()
 	})
 
 	var wg sync.WaitGroup
-	for _, tz := range []string{"Asia/Seoul", "Asia/Singapore", "America/Buenos_Aires", "Europe/London", "Australia/Sydney", "Africa/Cairo"} {
+
+	for _, tz := range []string{
+		"Asia/Seoul",
+		"Asia/Singapore",
+		"America/Buenos_Aires",
+		"Europe/London",
+		"Australia/Sydney",
+		"Africa/Cairo",
+	} {
 		wg.Add(1)
 		go func(tz string) {
 			defer wg.Done()
 
 			doWork, stream := doWorkFn(ctx, tz)
-			doWorkWithSteward := heal.NewSteward(time.Second /*timeout*/, doWork, checkHeartbeat)
+			doWorkWithSteward := heal.NewSteward(time.Second, doWork, checkHeartbeat)
 			doWorkWithSteward(ctx, time.Hour)
 
 			city := tz[strings.LastIndex(tz, "/")+1:]

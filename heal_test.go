@@ -7,7 +7,13 @@ import (
 )
 
 func ExampleNewSteward() {
-	// ward
+	ctx, cancel := context.WithCancel(context.TODO())
+
+	time.AfterFunc(5*time.Second, func() {
+		fmt.Println("main: halting steward and ward.")
+		cancel()
+	})
+
 	doWork := func(ctx context.Context, _ time.Duration) <-chan interface{} {
 		fmt.Println("ward: Hello, I'm irresponsible!")
 		go func() {
@@ -16,17 +22,10 @@ func ExampleNewSteward() {
 		}()
 		return nil
 	}
-
 	doWorkWithSteward := NewSteward(2*time.Second, doWork)
-
-	ctx, cancel := context.WithCancel(context.TODO())
-	time.AfterFunc(5*time.Second, func() {
-		fmt.Println("main: halting steward and ward.")
-		cancel()
-	})
-
 	for range doWorkWithSteward(ctx, 4*time.Second) {
 	}
+
 	fmt.Println("Done")
 
 	// Output:
