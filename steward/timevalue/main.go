@@ -21,6 +21,7 @@ func doWorkFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan str
 
 		go func() {
 			defer close(tmStream)
+			defer close(heartbeat)
 
 			select {
 			case tmChanStream <- tmStream:

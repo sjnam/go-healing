@@ -43,8 +43,8 @@ func NewSteward(timeout time.Duration, startGoroutine StartGoroutineFn, checkHea
 					case heartbeat <- struct{}{}:
 					default:
 					}
-				case hb := <-wardHeartbeat:
-					if !chkhb(hb) {
+				case hb, ok := <-wardHeartbeat:
+					if !ok || !chkhb(hb) {
 						log.Println("steward: invalid heartbeat; restarting")
 						wardCancel()
 						startWard()

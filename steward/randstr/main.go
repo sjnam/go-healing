@@ -30,6 +30,7 @@ func randStringFn(ctx context.Context) (heal.StartGoroutineFn, <-chan string) {
 
 		go func() {
 			defer close(tmStream)
+			defer close(heartbeat)
 
 			select {
 			case tmChanStream <- tmStream:
