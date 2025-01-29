@@ -81,12 +81,13 @@ func doWorkFn(ctx context.Context, tz string) (heal.StartGoroutineFn, <-chan str
 }
 
 func checkHeartbeat(hb interface{}) bool {
-	tz, ok := hb.(string)
-	if !ok {
+	tz := hb.(string)
+	if tz == "" {
 		return false
 	}
 
-	fmt.Printf("checkHeartbeatFn: %s\n", tz)
+	log.Printf("heartbeat: %s\n", tz)
+
 	return true
 }
 

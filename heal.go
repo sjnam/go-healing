@@ -45,7 +45,7 @@ func NewSteward(timeout time.Duration, startGoroutine StartGoroutineFn, checkHea
 					}
 				case hb := <-wardHeartbeat:
 					if !chkhb(hb) {
-						log.Println("steward: ward unhealthy; restarting")
+						log.Println("steward: invalid heartbeat; restarting")
 						wardCancel()
 						startWard()
 					}
