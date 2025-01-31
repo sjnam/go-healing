@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/sjnam/heal"
 )
 
-type pt []int
+type Pitcher []int
 
-func (p pt) String() string {
+func (p Pitcher) String() string {
 	var buf strings.Builder
 	for _, v := range p {
 		buf.WriteString(fmt.Sprintf("%d", v))
@@ -20,24 +22,28 @@ func (p pt) String() string {
 	return buf.String()
 }
 
-type result struct {
-	p   pt
+type Result struct {
+	p   Pitcher
 	cnt [2]int
+}
+
+func (r Result) String() string {
+	return fmt.Sprintf("%s %dS%dB", r.p, r.cnt[0], r.cnt[1])
 }
 
 func doWorkFn(
 	ctx context.Context,
 	num int,
-	input <-chan pt,
-) (heal.StartGoroutineFn, <-chan result) {
-	tmChanStream := make(chan (<-chan result))
+	input <-chan Pitcher,
+) (heal.StartGoroutineFn, <-chan Result) {
+	tmChanStream := make(chan (<-chan Result))
 
 	return func(
 		ctx context.Context,
 		pulseInterval time.Duration,
 	) <-chan interface{} {
 		heartbeat := make(chan interface{})
-		tmStream := make(chan result)
+		tmStream := make(chan Result)
 
 		go func() {
 			defer close(tmStream)
@@ -58,14 +64,14 @@ func doWorkFn(
 				}
 			}
 
-			sendResult := func(p pt, s [2]int) {
+			sendResult := func(p Pitcher, s [2]int) {
 				for {
 					select {
 					case <-ctx.Done():
 						return
 					case <-pulse:
 						sendPulse()
-					case tmStream <- result{p, s}:
+					case tmStream <- Result{p, s}:
 						return
 					}
 				}
@@ -94,7 +100,7 @@ func doWorkFn(
 	}, heal.Bridge(ctx, tmChanStream)
 }
 
-func count(target, p pt) [2]int {
+func count(target, p Pitcher) [2]int {
 	var strike, ball int
 
 	for i, v := range p {
@@ -113,7 +119,7 @@ func count(target, p pt) [2]int {
 	return [2]int{strike, ball}
 }
 
-func guess(n int) pt {
+func guess(n int) Pitcher {
 	nums := rand.Perm(9)[:n]
 
 	for i := 0; i < n; i++ {
@@ -130,8 +136,8 @@ func main() {
 		cancel()
 	})
 
-	pitch := func(ctx context.Context, n int) <-chan pt {
-		ch := make(chan pt)
+	pitch := func(ctx context.Context, n int) <-chan Pitcher {
+		ch := make(chan Pitcher)
 
 		go func() {
 			defer close(ch)
@@ -149,13 +155,19 @@ func main() {
 		return ch
 	}
 
-	const num = 3
+	num := 3
+	if len(os.Args) > 1 {
+		if n, err := strconv.Atoi(os.Args[1]); err == nil {
+			num = n
+		}
+	}
+
 	doWork, stream := doWorkFn(ctx, num, pitch(ctx, num))
 	doWorkWithSteward := heal.NewSteward(500*time.Millisecond, doWork)
 	doWorkWithSteward(ctx, time.Hour)
 
 	for res := range stream {
-		fmt.Printf("%s %dS%dB\n", res.p, res.cnt[0], res.cnt[1])
+		fmt.Println(res)
 	}
 
 	fmt.Println("done")
