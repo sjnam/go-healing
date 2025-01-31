@@ -88,10 +88,10 @@ func doWorkFn(
 					sendPulse()
 				case p := <-input:
 					cnt := count(target, p)
-					if cnt[0] == num-1 {
+					sendResult(p, cnt)
+					if cnt[0] == num {
 						return
 					}
-					sendResult(p, cnt)
 				}
 			}
 		}()
@@ -163,7 +163,7 @@ func main() {
 	}
 
 	doWork, stream := doWorkFn(ctx, num, pitch(ctx, num))
-	doWorkWithSteward := heal.NewSteward(500*time.Millisecond, doWork)
+	doWorkWithSteward := heal.NewSteward(100*time.Millisecond, doWork)
 	doWorkWithSteward(ctx, time.Hour)
 
 	for res := range stream {
