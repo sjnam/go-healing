@@ -12,7 +12,7 @@ import (
 
 func doWorkFn(
 	ctx context.Context,
-	target []int,
+	num int,
 	balls <-chan []int,
 ) (heal.StartGoroutineFn, <-chan string) {
 	tmChanStream := make(chan (<-chan string))
@@ -56,6 +56,9 @@ func doWorkFn(
 				}
 			}
 
+			target := pitch(num)
+			log.Print("TARGET", target)
+
 			for {
 				select {
 				case <-ctx.Done():
@@ -64,7 +67,7 @@ func doWorkFn(
 					sendPulse()
 				case p := <-balls:
 					cnt := count(target, p)
-					if cnt == "3S 0B" {
+					if cnt == "0S 0B" {
 						return
 					}
 					sendResult(cnt)
@@ -102,6 +105,25 @@ func pitch(n int) []int {
 	return numbers
 }
 
+func guess(ctx context.Context, n int) <-chan []int {
+	ch := make(chan []int)
+	go func() {
+		defer close(ch)
+		for {
+			ball := pitch(n)
+			log.Print(ball)
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- ball:
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+	}()
+
+	return ch
+}
+
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Ltime)
@@ -112,23 +134,10 @@ func main() {
 		cancel()
 	})
 
-	ch := make(chan []int)
-	defer close(ch)
-
-	go func() {
-		for {
-			ball := pitch(3)
-			log.Print("pitched", ball)
-			ch <- ball
-			time.Sleep(1 * time.Second)
-		}
-	}()
-
-	target := pitch(3)
-	log.Print("TARGET ", target)
-
-	doWork, stream := doWorkFn(ctx, target, ch)
-	doWorkWithSteward := heal.NewSteward(time.Second, doWork)
+	const num = 4
+	ch := guess(ctx, num)
+	doWork, stream := doWorkFn(ctx, num, ch)
+	doWorkWithSteward := heal.NewSteward(100*time.Millisecond, doWork)
 	doWorkWithSteward(ctx, time.Hour)
 
 	for val := range stream {
