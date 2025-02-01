@@ -1,4 +1,4 @@
-package heal
+package healing
 
 import (
 	"context"

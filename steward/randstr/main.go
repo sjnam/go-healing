@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/sjnam/heal"
+	"github.com/sjnam/healing"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@#$%^&*()_+[]{}\\|/.,<>;:")
@@ -20,7 +20,7 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-func randStringFn(ctx context.Context) (heal.StartGoroutineFn, <-chan string) {
+func randStringFn(ctx context.Context) (healing.StartGoroutineFn, <-chan string) {
 	tmChanStream := make(chan (<-chan string))
 
 	return func(
@@ -76,7 +76,7 @@ func randStringFn(ctx context.Context) (heal.StartGoroutineFn, <-chan string) {
 		}()
 
 		return heartbeat
-	}, heal.Bridge(ctx, tmChanStream)
+	}, healing.Bridge(ctx, tmChanStream)
 }
 
 func main() {
@@ -90,7 +90,7 @@ func main() {
 	})
 
 	doWork, stream := randStringFn(ctx)
-	doWorkWithSteward := heal.NewSteward(time.Second /*timeout*/, doWork)
+	doWorkWithSteward := healing.NewSteward(time.Second /*timeout*/, doWork)
 	doWorkWithSteward(ctx, time.Hour)
 
 	for val := range stream {

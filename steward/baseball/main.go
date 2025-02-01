@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sjnam/heal"
+	"github.com/sjnam/healing"
 )
 
 type Pitcher []int
@@ -35,7 +35,7 @@ func doWorkFn(
 	ctx context.Context,
 	num int,
 	input <-chan Pitcher,
-) (heal.StartGoroutineFn, <-chan Result) {
+) (healing.StartGoroutineFn, <-chan Result) {
 	tmChanStream := make(chan (<-chan Result))
 
 	return func(
@@ -97,7 +97,7 @@ func doWorkFn(
 		}()
 
 		return heartbeat
-	}, heal.Bridge(ctx, tmChanStream)
+	}, healing.Bridge(ctx, tmChanStream)
 }
 
 func count(target, p Pitcher) [2]int {
@@ -148,7 +148,7 @@ func main() {
 					return
 				case ch <- guess(n):
 				}
-				time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 			}
 		}()
 
@@ -163,7 +163,7 @@ func main() {
 	}
 
 	doWork, stream := doWorkFn(ctx, num, pitch(ctx, num))
-	doWorkWithSteward := heal.NewSteward(100*time.Millisecond, doWork)
+	doWorkWithSteward := healing.NewSteward(100*time.Millisecond, doWork)
 	doWorkWithSteward(ctx, time.Hour)
 
 	for res := range stream {

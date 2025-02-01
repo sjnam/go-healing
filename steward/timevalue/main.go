@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sjnam/heal"
+	"github.com/sjnam/healing"
 )
 
 func doWorkFn(
 	ctx context.Context,
 	tz string,
-) (heal.StartGoroutineFn, <-chan string) {
+) (healing.StartGoroutineFn, <-chan string) {
 	tmChanStream := make(chan (<-chan string))
 
 	return func(
@@ -83,7 +83,7 @@ func doWorkFn(
 		}()
 
 		return heartbeat
-	}, heal.Bridge(ctx, tmChanStream)
+	}, healing.Bridge(ctx, tmChanStream)
 }
 
 func checkHeartbeat(hb interface{}) bool {
@@ -122,7 +122,7 @@ func main() {
 			defer wg.Done()
 
 			doWork, stream := doWorkFn(ctx, tz)
-			doWorkWithSteward := heal.NewSteward(time.Second, doWork, checkHeartbeat)
+			doWorkWithSteward := healing.NewSteward(time.Second, doWork, checkHeartbeat)
 			doWorkWithSteward(ctx, time.Hour)
 
 			city := tz[strings.LastIndex(tz, "/")+1:]
