@@ -6,8 +6,16 @@ import (
 	"time"
 )
 
+type Heartbeat int
+
+const (
+	Invalid Heartbeat = iota
+	Valid
+	ForceStop
+)
+
 type (
-	checkHeartbeatFn func(interface{}) bool
+	checkHeartbeatFn func(interface{}) Heartbeat
 	StartGoroutineFn func(context.Context, time.Duration) <-chan interface{}
 )
 
@@ -16,7 +24,7 @@ func NewSteward(
 	startGoroutine StartGoroutineFn,
 	checkHeartbeat ...checkHeartbeatFn,
 ) StartGoroutineFn {
-	chkhb := func(interface{}) bool { return true }
+	chkhb := func(interface{}) Heartbeat { return Valid }
 	if len(checkHeartbeat) == 1 {
 		chkhb = checkHeartbeat[0]
 	}
@@ -52,10 +60,15 @@ func NewSteward(
 					default:
 					}
 				case hb, ok := <-wardHeartbeat:
-					if !ok || !chkhb(hb) {
+					thb := chkhb(hb)
+					if !ok || thb == Invalid {
 						log.Println("\033[31msteward: invalid heartbeat; restarting\033[0m")
 						wardCancel()
 						startWard()
+					} else if thb == ForceStop {
+						log.Println("\033[31msteward: STOP\033[0m")
+						wardCancel()
+						return
 					}
 					goto monitorLoop
 				case <-timeoutSignal:

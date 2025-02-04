@@ -86,15 +86,15 @@ func doWorkFn(
 	}, healing.Bridge(ctx, tmChanStream)
 }
 
-func checkHeartbeat(hb interface{}) bool {
+func checkHeartbeat(hb interface{}) healing.Heartbeat {
 	tz := hb.(string)
 	if tz == "" {
-		return false
+		return healing.Invalid
 	}
 
 	log.Printf("\033[36mheartbeat: %s\033[0m", tz)
 
-	return true
+	return healing.Valid
 }
 
 func main() {
