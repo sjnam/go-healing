@@ -87,8 +87,8 @@ func doWorkFn(
 }
 
 func checkHeartbeat(hb interface{}) healing.Heartbeat {
-	tz := hb.(string)
-	if tz == "" {
+	tz, ok := hb.(string)
+	if !ok || tz == "" {
 		return healing.Invalid
 	}
 
