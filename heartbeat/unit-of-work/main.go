@@ -30,7 +30,7 @@ func main() {
 		return heartbeat, results
 	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	heartbeat, results := doWork(ctx)

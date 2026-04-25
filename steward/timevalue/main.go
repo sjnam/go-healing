@@ -35,8 +35,12 @@ func doWorkFn(
 				return
 			}
 
-			pulse := time.Tick(pulseInterval)
-			workGen := time.Tick(1 * time.Second)
+			pulseTicker := time.NewTicker(pulseInterval)
+			defer pulseTicker.Stop()
+			workTicker := time.NewTicker(1 * time.Second)
+			defer workTicker.Stop()
+			pulse := pulseTicker.C
+			workGen := workTicker.C
 
 			errPulse := time.After(time.Duration(1+rand.Intn(5)) * time.Second)
 
@@ -101,7 +105,7 @@ func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Ltime)
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(20*time.Second, func() {
 		log.Println("\033[31mmain: halting steward and ward\033[0m")
 		cancel()

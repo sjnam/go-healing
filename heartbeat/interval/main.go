@@ -17,8 +17,12 @@ func main() {
 			defer close(heartbeat)
 			defer close(results)
 
-			pulse := time.Tick(pulseInterval)
-			workGen := time.Tick(2 * pulseInterval)
+			pulseTicker := time.NewTicker(pulseInterval)
+			defer pulseTicker.Stop()
+			workTicker := time.NewTicker(2 * pulseInterval)
+			defer workTicker.Stop()
+			pulse := pulseTicker.C
+			workGen := workTicker.C
 
 			sendPulse := func() {
 				select {
@@ -53,7 +57,7 @@ func main() {
 		return heartbeat, results
 	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(10*time.Second, func() { cancel() })
 
 	const timeout = 2 * time.Second

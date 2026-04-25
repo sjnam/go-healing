@@ -9,8 +9,8 @@ import (
 type Heartbeat int
 
 const (
-	Invalid Heartbeat = iota
-	Valid
+	Valid Heartbeat = iota
+	Invalid
 	ForceStop
 )
 
@@ -44,40 +44,44 @@ func NewSteward(
 			)
 			startWard := func() {
 				wardCtx, wardCancel = context.WithCancel(ctx)
-				wardHeartbeat = startGoroutine(or(ctx, wardCtx), timeout/2)
+				wardHeartbeat = startGoroutine(wardCtx, timeout/2)
 			}
 			startWard()
 
-			pulse := time.Tick(pulseInterval)
+			ticker := time.NewTicker(pulseInterval)
+			defer ticker.Stop()
 
-		monitorLoop:
-			timeoutSignal := time.After(timeout)
 			for {
-				select {
-				case <-pulse:
+				timeoutSignal := time.After(timeout)
+				resetTimeout := false
+				for !resetTimeout {
 					select {
-					case heartbeat <- struct{}{}:
-					default:
-					}
-				case hb, ok := <-wardHeartbeat:
-					thb := chkhb(hb)
-					if !ok || thb == Invalid {
-						log.Println("\033[31msteward: invalid heartbeat; restarting\033[0m")
+					case <-ticker.C:
+						select {
+						case heartbeat <- struct{}{}:
+						default:
+						}
+					case hb, ok := <-wardHeartbeat:
+						thb := chkhb(hb)
+						if !ok || thb == Invalid {
+							log.Println("steward: invalid heartbeat; restarting")
+							wardCancel()
+							startWard()
+						} else if thb == ForceStop {
+							log.Println("steward: STOP")
+							wardCancel()
+							return
+						}
+						resetTimeout = true
+					case <-timeoutSignal:
+						log.Println("steward: ward unhealthy; restarting")
 						wardCancel()
 						startWard()
-					} else if thb == ForceStop {
-						log.Println("\033[31msteward: STOP\033[0m")
+						resetTimeout = true
+					case <-ctx.Done():
 						wardCancel()
 						return
 					}
-					goto monitorLoop
-				case <-timeoutSignal:
-					log.Println("\033[31msteward: ward unhealthy; restarting\033[0m")
-					wardCancel()
-					startWard()
-					goto monitorLoop
-				case <-ctx.Done():
-					return
 				}
 			}
 		}()

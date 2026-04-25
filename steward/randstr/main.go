@@ -40,8 +40,12 @@ func randStringFn(ctx context.Context) (healing.StartGoroutineFn, <-chan string)
 				return
 			}
 
-			pulse := time.Tick(pulseInterval)
-			workGen := time.Tick(2 * pulseInterval)
+			pulseTicker := time.NewTicker(pulseInterval)
+			defer pulseTicker.Stop()
+			workTicker := time.NewTicker(2 * pulseInterval)
+			defer workTicker.Stop()
+			pulse := pulseTicker.C
+			workGen := workTicker.C
 
 			sendPulse := func() {
 				select {
@@ -83,7 +87,7 @@ func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Ltime)
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(30*time.Second, func() {
 		log.Println("main: halting steward and ward.")
 		cancel()

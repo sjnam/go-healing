@@ -55,7 +55,9 @@ func doWorkFn(
 				return
 			}
 
-			pulse := time.Tick(pulseInterval)
+			pulseTicker := time.NewTicker(pulseInterval)
+			defer pulseTicker.Stop()
+			pulse := pulseTicker.C
 
 			sendPulse := func() {
 				select {
@@ -130,7 +132,7 @@ func guess(n int) Pitcher {
 }
 
 func main() {
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(time.Hour, func() {
 		fmt.Println("\033[31mmain: halting steward and ward\033[0m")
 		cancel()
@@ -158,6 +160,10 @@ func main() {
 	num := 3
 	if len(os.Args) > 1 {
 		if n, err := strconv.Atoi(os.Args[1]); err == nil {
+			if n < 1 || n > 9 {
+				fmt.Fprintln(os.Stderr, "num must be between 1 and 9")
+				os.Exit(1)
+			}
 			num = n
 		}
 	}
