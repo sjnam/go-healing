@@ -1,4 +1,4 @@
-# healing — Self-Healing Goroutines for Go
+# Self-Healing Goroutines for Go
 
 `healing` is a tiny, dependency-free library that keeps long-running
 ("daemon-like") goroutines alive. It implements the **Steward–Ward** pattern: a
