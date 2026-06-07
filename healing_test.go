@@ -116,13 +116,42 @@ func TestNewSteward_RestartsOnInvalidHeartbeat(t *testing.T) {
 	}
 	alwaysInvalid := func(interface{}) Heartbeat { return Invalid }
 
-	NewSteward(time.Second, doWork, alwaysInvalid)(ctx, time.Hour)
+	NewSteward(time.Second, doWork, WithCheckHeartbeat(alwaysInvalid))(ctx, time.Hour)
 
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 
 	if n := restarts.Load(); n < 3 {
 		t.Errorf("expected ≥3 restarts on invalid heartbeat, got %d", n)
+	}
+}
+
+func TestNewSteward_BackoffThrottlesRestarts(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var restarts atomic.Int32
+	doWork := func(ctx context.Context, _ time.Duration) <-chan interface{} {
+		restarts.Add(1)
+		hb := make(chan interface{})
+		close(hb) // fail immediately on every start
+		return hb
+	}
+
+	// A fixed 20ms backoff caps restarts to roughly window/backoff. Without
+	// throttling an immediately-failing ward would restart thousands of times.
+	NewSteward(time.Second, doWork, WithBackoff(20*time.Millisecond, 20*time.Millisecond))(ctx, time.Hour)
+
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	// ~1 initial start + ~5 restarts in 100ms. Allow generous slack for
+	// scheduling but assert the storm is bounded well below an unthrottled loop.
+	if n := restarts.Load(); n > 15 {
+		t.Errorf("expected backoff to throttle restarts to a handful, got %d", n)
+	}
+	if n := restarts.Load(); n < 2 {
+		t.Errorf("expected at least one restart within the window, got %d", n)
 	}
 }
 
@@ -143,7 +172,7 @@ func TestNewSteward_ForceStop(t *testing.T) {
 		return Valid
 	}
 
-	hbCh := NewSteward(time.Second, doWork, passThrough)(ctx, time.Hour)
+	hbCh := NewSteward(time.Second, doWork, WithCheckHeartbeat(passThrough))(ctx, time.Hour)
 
 	select {
 	case _, ok := <-hbCh:

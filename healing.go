@@ -19,14 +19,76 @@ type (
 	StartGoroutineFn func(context.Context, time.Duration) <-chan interface{}
 )
 
+// Default backoff bounds applied to ward restarts when WithBackoff is not used.
+// The interval starts at minBackoff, doubles on each consecutive restart, and is
+// capped at maxBackoff. It resets to minBackoff once a healthy heartbeat arrives.
+const (
+	defaultMinBackoff = 10 * time.Millisecond
+	defaultMaxBackoff = 5 * time.Second
+)
+
+type stewardConfig struct {
+	checkHeartbeat checkHeartbeatFn
+	logger         *log.Logger
+	minBackoff     time.Duration
+	maxBackoff     time.Duration
+}
+
+// Option configures a steward created by NewSteward.
+type Option func(*stewardConfig)
+
+// WithCheckHeartbeat installs a validator that inspects each ward heartbeat. The
+// ward is restarted when it returns Invalid and stopped when it returns
+// ForceStop. A nil fn is ignored.
+func WithCheckHeartbeat(fn func(interface{}) Heartbeat) Option {
+	return func(c *stewardConfig) {
+		if fn != nil {
+			c.checkHeartbeat = fn
+		}
+	}
+}
+
+// WithLogger directs the steward's diagnostic messages to a specific logger. Use
+// log.New(io.Discard, "", 0) to silence them. A nil logger is ignored.
+func WithLogger(l *log.Logger) Option {
+	return func(c *stewardConfig) {
+		if l != nil {
+			c.logger = l
+		}
+	}
+}
+
+// WithBackoff sets the minimum and maximum interval the steward waits before
+// restarting a failed ward. min is clamped to [0, max]; a min of 0 disables the
+// initial delay. Repeated failures double the wait up to max.
+func WithBackoff(min, max time.Duration) Option {
+	return func(c *stewardConfig) {
+		if max < 0 {
+			max = 0
+		}
+		if min < 0 {
+			min = 0
+		}
+		if min > max {
+			min = max
+		}
+		c.minBackoff, c.maxBackoff = min, max
+	}
+}
+
 func NewSteward(
 	timeout time.Duration,
 	startGoroutine StartGoroutineFn,
-	checkHeartbeat ...checkHeartbeatFn,
+	opts ...Option,
 ) StartGoroutineFn {
-	chkhb := func(interface{}) Heartbeat { return Valid }
-	if len(checkHeartbeat) == 1 {
-		chkhb = checkHeartbeat[0]
+	cfg := stewardConfig{
+		checkHeartbeat: func(interface{}) Heartbeat { return Valid },
+		logger:         log.Default(),
+		minBackoff:     defaultMinBackoff,
+		maxBackoff:     defaultMaxBackoff,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
 	}
 
 	return func(
@@ -48,6 +110,25 @@ func NewSteward(
 			}
 			startWard()
 
+			backoff := cfg.minBackoff
+			// restart cancels the current ward, waits a backoff interval that
+			// grows with consecutive failures, then starts a fresh ward. It
+			// returns false if ctx is cancelled while waiting, signalling the
+			// steward to stop.
+			restart := func() bool {
+				wardCancel()
+				if backoff > 0 {
+					select {
+					case <-time.After(backoff):
+					case <-ctx.Done():
+						return false
+					}
+				}
+				startWard()
+				backoff = min(backoff*2, cfg.maxBackoff)
+				return true
+			}
+
 			ticker := time.NewTicker(pulseInterval)
 			defer ticker.Stop()
 
@@ -62,21 +143,26 @@ func NewSteward(
 						default:
 						}
 					case hb, ok := <-wardHeartbeat:
-						thb := chkhb(hb)
-						if !ok || thb == Invalid {
-							log.Println("steward: invalid heartbeat; restarting")
-							wardCancel()
-							startWard()
-						} else if thb == ForceStop {
-							log.Println("steward: STOP")
+						thb := cfg.checkHeartbeat(hb)
+						switch {
+						case !ok || thb == Invalid:
+							cfg.logger.Println("steward: invalid heartbeat; restarting ward")
+							if !restart() {
+								return
+							}
+						case thb == ForceStop:
+							cfg.logger.Println("steward: force stop")
 							wardCancel()
 							return
+						default:
+							backoff = cfg.minBackoff // healthy ward; reset backoff
 						}
 						resetTimeout = true
 					case <-timeoutSignal:
-						log.Println("steward: ward unhealthy; restarting")
-						wardCancel()
-						startWard()
+						cfg.logger.Println("steward: ward timed out; restarting ward")
+						if !restart() {
+							return
+						}
 						resetTimeout = true
 					case <-ctx.Done():
 						wardCancel()

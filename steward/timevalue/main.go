@@ -126,7 +126,7 @@ func main() {
 			defer wg.Done()
 
 			doWork, stream := doWorkFn(ctx, tz)
-			doWorkWithSteward := healing.NewSteward(time.Second, doWork, checkHeartbeat)
+			doWorkWithSteward := healing.NewSteward(time.Second, doWork, healing.WithCheckHeartbeat(checkHeartbeat))
 			doWorkWithSteward(ctx, time.Hour)
 
 			city := tz[strings.LastIndex(tz, "/")+1:]
