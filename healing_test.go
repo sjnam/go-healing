@@ -177,7 +177,8 @@ func TestNewSteward_ForceStop(t *testing.T) {
 	select {
 	case _, ok := <-hbCh:
 		if ok {
-			for range hbCh {} // drain residual pulses
+			for range hbCh {
+			} // drain residual pulses
 			t.Error("expected heartbeat channel to be closed after ForceStop")
 		}
 	case <-time.After(300 * time.Millisecond):
@@ -201,7 +202,8 @@ func TestNewSteward_ContextCancel(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		for range hbCh {}
+		for range hbCh {
+		}
 		close(done)
 	}()
 	select {

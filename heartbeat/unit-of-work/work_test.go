@@ -69,7 +69,8 @@ func TestDoWork_ContextCancel(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		for range results {}
+		for range results {
+		}
 		close(done)
 	}()
 
@@ -97,13 +98,15 @@ func TestDoWork_BothChannelsCloseWhenDone(t *testing.T) {
 	}
 
 	// Drain all results; completes when intStream is closed.
-	for range results {}
+	for range results {
+	}
 
 	// Heartbeat channel should also be closed now (or have only buffered values
 	// left before closing). Drain it with a timeout.
 	done := make(chan struct{})
 	go func() {
-		for range heartbeat {}
+		for range heartbeat {
+		}
 		close(done)
 	}()
 
