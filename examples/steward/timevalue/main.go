@@ -121,10 +121,7 @@ func main() {
 		"Australia/Sydney",
 		"Africa/Cairo",
 	} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			doWork, stream := doWorkFn(ctx, tz)
 			doWorkWithSteward := healing.NewSteward(time.Second, doWork, healing.WithCheckHeartbeat(checkHeartbeat))
 			doWorkWithSteward(ctx, time.Hour)
@@ -133,7 +130,7 @@ func main() {
 			for val := range stream {
 				log.Printf("%s: %s", city, val)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 

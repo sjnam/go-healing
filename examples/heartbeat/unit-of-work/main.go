@@ -14,7 +14,7 @@ func main() {
 			defer close(heartbeat)
 			defer close(results)
 
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				select {
 				case heartbeat <- struct{}{}:
 				default:

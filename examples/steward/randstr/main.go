@@ -67,7 +67,7 @@ func randStringFn(ctx context.Context) (healing.StartGoroutineFn, <-chan string)
 				}
 			}
 
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				select {
 				case <-ctx.Done():
 					return

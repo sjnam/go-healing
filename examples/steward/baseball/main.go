@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -16,8 +17,8 @@ type Pitcher []int
 
 func (p Pitcher) String() string {
 	var buf strings.Builder
-	for _, v := range p {
-		buf.WriteString(fmt.Sprintf("%d", v))
+	for v := range slices.Values(p) {
+		fmt.Fprintf(&buf, "%d", v)
 	}
 	return buf.String()
 }
@@ -124,7 +125,7 @@ func count(target, p Pitcher) [2]int {
 func guess(n int) Pitcher {
 	nums := rand.Perm(9)[:n]
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		nums[i]++
 	}
 

@@ -10,8 +10,7 @@ import (
 // 1 second when the heartbeat is not awaited first, because DoWork delays 2
 // seconds before producing any output. Callers must synchronize via heartbeat.
 func TestDoWork_WithoutHeartbeat(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	intSlice := []int{0, 1, 2, 3, 5}
 	_, results := DoWork(ctx, intSlice...)
@@ -25,8 +24,7 @@ func TestDoWork_WithoutHeartbeat(t *testing.T) {
 }
 
 func TestDoWork_Success(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	intSlice := []int{0, 1, 2, 3, 5}
 	heartbeat, results := DoWork(ctx, intSlice...)
@@ -84,8 +82,7 @@ func TestDoWork_ContextCancel(t *testing.T) {
 // TestDoWork_BothChannelsCloseWhenDone verifies that both the heartbeat and
 // results channels are closed once all work has been completed.
 func TestDoWork_BothChannelsCloseWhenDone(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	intSlice := []int{0, 1, 2}
 	heartbeat, results := DoWork(ctx, intSlice...)

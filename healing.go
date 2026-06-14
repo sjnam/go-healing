@@ -3,6 +3,7 @@ package healing
 import (
 	"context"
 	"log"
+	"slices"
 	"time"
 )
 
@@ -87,7 +88,7 @@ func NewSteward(
 		minBackoff:     defaultMinBackoff,
 		maxBackoff:     defaultMaxBackoff,
 	}
-	for _, opt := range opts {
+	for opt := range slices.Values(opts) {
 		opt(&cfg)
 	}
 

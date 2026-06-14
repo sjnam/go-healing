@@ -156,8 +156,7 @@ func TestNewSteward_BackoffThrottlesRestarts(t *testing.T) {
 }
 
 func TestNewSteward_ForceStop(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	doWork := func(ctx context.Context, _ time.Duration) <-chan any {
 		hb := make(chan any, 1)
@@ -214,8 +213,7 @@ func TestNewSteward_ContextCancel(t *testing.T) {
 }
 
 func TestNewSteward_EmitsHeartbeat(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	hbCh := NewSteward(time.Second, healthyWard)(ctx, 20*time.Millisecond)
 
@@ -286,8 +284,7 @@ func TestOr_ManyContexts(t *testing.T) {
 }
 
 func TestOr_SingleContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	if result := or(ctx); result != ctx {
 		t.Fatal("or with a single context should return that same context")
@@ -297,8 +294,7 @@ func TestOr_SingleContext(t *testing.T) {
 // --- orDone ---
 
 func TestOrDone_PassesAllValues(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	ch := make(chan int, 3)
 	ch <- 1
@@ -335,8 +331,7 @@ func TestOrDone_ClosesOnContextCancel(t *testing.T) {
 // --- Bridge ---
 
 func TestBridge_FlattensChannels(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	chch := make(chan (<-chan int), 2)
 
