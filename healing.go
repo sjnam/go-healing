@@ -15,8 +15,8 @@ const (
 )
 
 type (
-	checkHeartbeatFn func(interface{}) Heartbeat
-	StartGoroutineFn func(context.Context, time.Duration) <-chan interface{}
+	checkHeartbeatFn func(any) Heartbeat
+	StartGoroutineFn func(context.Context, time.Duration) <-chan any
 )
 
 // Default backoff bounds applied to ward restarts when WithBackoff is not used.
@@ -40,7 +40,7 @@ type Option func(*stewardConfig)
 // WithCheckHeartbeat installs a validator that inspects each ward heartbeat. The
 // ward is restarted when it returns Invalid and stopped when it returns
 // ForceStop. A nil fn is ignored.
-func WithCheckHeartbeat(fn func(interface{}) Heartbeat) Option {
+func WithCheckHeartbeat(fn func(any) Heartbeat) Option {
 	return func(c *stewardConfig) {
 		if fn != nil {
 			c.checkHeartbeat = fn
@@ -82,7 +82,7 @@ func NewSteward(
 	opts ...Option,
 ) StartGoroutineFn {
 	cfg := stewardConfig{
-		checkHeartbeat: func(interface{}) Heartbeat { return Valid },
+		checkHeartbeat: func(any) Heartbeat { return Valid },
 		logger:         log.Default(),
 		minBackoff:     defaultMinBackoff,
 		maxBackoff:     defaultMaxBackoff,
@@ -94,15 +94,15 @@ func NewSteward(
 	return func(
 		ctx context.Context,
 		pulseInterval time.Duration,
-	) <-chan interface{} {
-		heartbeat := make(chan interface{})
+	) <-chan any {
+		heartbeat := make(chan any)
 		go func() {
 			defer close(heartbeat)
 
 			var (
 				wardCtx       context.Context
 				wardCancel    context.CancelFunc
-				wardHeartbeat <-chan interface{}
+				wardHeartbeat <-chan any
 			)
 			startWard := func() {
 				wardCtx, wardCancel = context.WithCancel(ctx)
@@ -146,12 +146,12 @@ func NewSteward(
 						thb := cfg.checkHeartbeat(hb)
 						switch {
 						case !ok || thb == Invalid:
-							cfg.logger.Println("steward: invalid heartbeat; restarting ward")
+							cfg.logger.Println("\033[31msteward: invalid heartbeat; restarting ward\033[0m")
 							if !restart() {
 								return
 							}
 						case thb == ForceStop:
-							cfg.logger.Println("steward: force stop")
+							cfg.logger.Println("\033[31msteward: force stop\033[0m")
 							wardCancel()
 							return
 						default:
@@ -159,7 +159,7 @@ func NewSteward(
 						}
 						resetTimeout = true
 					case <-timeoutSignal:
-						cfg.logger.Println("steward: ward timed out; restarting ward")
+						cfg.logger.Println("\033[31msteward: ward timed out; restarting ward\033[0m")
 						if !restart() {
 							return
 						}

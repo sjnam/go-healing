@@ -21,8 +21,8 @@ func doWorkFn(
 	return func(
 		ctx context.Context,
 		pulseInterval time.Duration,
-	) <-chan interface{} {
-		heartbeat := make(chan interface{})
+	) <-chan any {
+		heartbeat := make(chan any)
 		tmStream := make(chan string)
 
 		go func() {
@@ -90,7 +90,7 @@ func doWorkFn(
 	}, healing.Bridge(ctx, tmChanStream)
 }
 
-func checkHeartbeat(hb interface{}) healing.Heartbeat {
+func checkHeartbeat(hb any) healing.Heartbeat {
 	tz, ok := hb.(string)
 	if !ok || tz == "" {
 		return healing.Invalid

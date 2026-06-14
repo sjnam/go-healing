@@ -10,8 +10,8 @@ func main() {
 	doWork := func(
 		ctx context.Context,
 		pulseInterval time.Duration,
-	) (<-chan interface{}, <-chan time.Time) {
-		heartbeat := make(chan interface{})
+	) (<-chan any, <-chan time.Time) {
+		heartbeat := make(chan any)
 		results := make(chan time.Time)
 		go func() {
 			defer close(heartbeat)

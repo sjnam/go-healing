@@ -41,8 +41,8 @@ func doWorkFn(
 	return func(
 		ctx context.Context,
 		pulseInterval time.Duration,
-	) <-chan interface{} {
-		heartbeat := make(chan interface{})
+	) <-chan any {
+		heartbeat := make(chan any)
 		tmStream := make(chan Result)
 
 		go func() {

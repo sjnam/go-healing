@@ -18,7 +18,7 @@ func ExampleNewSteward() {
 		cancel()
 	})
 
-	doWork := func(ctx context.Context, _ time.Duration) <-chan interface{} {
+	doWork := func(ctx context.Context, _ time.Duration) <-chan any {
 		fmt.Println("ward: Hello, I'm irresponsible!")
 		go func() {
 			<-ctx.Done()
@@ -38,8 +38,8 @@ func ExampleNewSteward() {
 
 // healthyWard returns a ward that sends heartbeats at pulseInterval until ctx
 // is cancelled. Used as a reusable helper across steward tests.
-func healthyWard(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
-	heartbeat := make(chan interface{})
+func healthyWard(ctx context.Context, pulseInterval time.Duration) <-chan any {
+	heartbeat := make(chan any)
 	go func() {
 		defer close(heartbeat)
 		ticker := time.NewTicker(pulseInterval)
@@ -66,7 +66,7 @@ func TestNewSteward_RestartsOnTimeout(t *testing.T) {
 	defer cancel()
 
 	var restarts atomic.Int32
-	doWork := func(ctx context.Context, _ time.Duration) <-chan interface{} {
+	doWork := func(ctx context.Context, _ time.Duration) <-chan any {
 		restarts.Add(1)
 		return nil // nil channel → steward always times out
 	}
@@ -86,9 +86,9 @@ func TestNewSteward_RestartsOnChannelClose(t *testing.T) {
 	defer cancel()
 
 	var restarts atomic.Int32
-	doWork := func(ctx context.Context, _ time.Duration) <-chan interface{} {
+	doWork := func(ctx context.Context, _ time.Duration) <-chan any {
 		restarts.Add(1)
-		hb := make(chan interface{})
+		hb := make(chan any)
 		close(hb) // immediate close triggers restart
 		return hb
 	}
@@ -108,13 +108,13 @@ func TestNewSteward_RestartsOnInvalidHeartbeat(t *testing.T) {
 	defer cancel()
 
 	var restarts atomic.Int32
-	doWork := func(ctx context.Context, _ time.Duration) <-chan interface{} {
+	doWork := func(ctx context.Context, _ time.Duration) <-chan any {
 		restarts.Add(1)
-		hb := make(chan interface{}, 1)
+		hb := make(chan any, 1)
 		hb <- struct{}{} // checkHeartbeat will mark this Invalid
 		return hb
 	}
-	alwaysInvalid := func(interface{}) Heartbeat { return Invalid }
+	alwaysInvalid := func(any) Heartbeat { return Invalid }
 
 	NewSteward(time.Second, doWork, WithCheckHeartbeat(alwaysInvalid))(ctx, time.Hour)
 
@@ -131,9 +131,9 @@ func TestNewSteward_BackoffThrottlesRestarts(t *testing.T) {
 	defer cancel()
 
 	var restarts atomic.Int32
-	doWork := func(ctx context.Context, _ time.Duration) <-chan interface{} {
+	doWork := func(ctx context.Context, _ time.Duration) <-chan any {
 		restarts.Add(1)
-		hb := make(chan interface{})
+		hb := make(chan any)
 		close(hb) // fail immediately on every start
 		return hb
 	}
@@ -159,13 +159,13 @@ func TestNewSteward_ForceStop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	doWork := func(ctx context.Context, _ time.Duration) <-chan interface{} {
-		hb := make(chan interface{}, 1)
+	doWork := func(ctx context.Context, _ time.Duration) <-chan any {
+		hb := make(chan any, 1)
 		hb <- ForceStop
 		return hb
 	}
 	// checkHeartbeat must forward Heartbeat typed values so ForceStop propagates.
-	passThrough := func(hb interface{}) Heartbeat {
+	passThrough := func(hb any) Heartbeat {
 		if h, ok := hb.(Heartbeat); ok {
 			return h
 		}

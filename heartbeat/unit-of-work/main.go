@@ -7,8 +7,8 @@ import (
 )
 
 func main() {
-	doWork := func(ctx context.Context) (<-chan interface{}, <-chan int) {
-		heartbeat := make(chan interface{}, 1)
+	doWork := func(ctx context.Context) (<-chan any, <-chan int) {
+		heartbeat := make(chan any, 1)
 		results := make(chan int)
 		go func() {
 			defer close(heartbeat)

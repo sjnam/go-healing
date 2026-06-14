@@ -31,7 +31,7 @@ Both the ward and the steward share one signature, which makes them composable â
 a steward can itself be wrapped by another steward:
 
 ```go
-type StartGoroutineFn func(ctx context.Context, pulseInterval time.Duration) <-chan interface{}
+type StartGoroutineFn func(ctx context.Context, pulseInterval time.Duration) <-chan any
 ```
 
 A ward returns a **heartbeat channel** and is expected to send a value on it at
@@ -80,8 +80,8 @@ import (
 
 // worker pulses every pulseInterval and occasionally "dies" to demonstrate
 // automatic recovery.
-func worker(ctx context.Context, pulseInterval time.Duration) <-chan interface{} {
-	heartbeat := make(chan interface{})
+func worker(ctx context.Context, pulseInterval time.Duration) <-chan any {
+	heartbeat := make(chan any)
 	go func() {
 		defer close(heartbeat)
 		pulse := time.NewTicker(pulseInterval)
@@ -131,8 +131,8 @@ return `Bridge(ctx, that)`:
 func workFn(ctx context.Context) (healing.StartGoroutineFn, <-chan string) {
 	chch := make(chan (<-chan string))
 
-	startFn := func(ctx context.Context, pulse time.Duration) <-chan interface{} {
-		heartbeat := make(chan interface{})
+	startFn := func(ctx context.Context, pulse time.Duration) <-chan any {
+		heartbeat := make(chan any)
 		results := make(chan string)
 		go func() {
 			defer close(results)
@@ -180,7 +180,7 @@ closes when the context is cancelled or the ward force-stops.
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `WithCheckHeartbeat(fn func(interface{}) Heartbeat)` | Validator that classifies each ward heartbeat as `Valid`/`Invalid`/`ForceStop`. A `nil` fn is ignored. | always `Valid` |
+| `WithCheckHeartbeat(fn func(any) Heartbeat)` | Validator that classifies each ward heartbeat as `Valid`/`Invalid`/`ForceStop`. A `nil` fn is ignored. | always `Valid` |
 | `WithLogger(l *log.Logger)` | Destination for the steward's diagnostic logs. Pass `log.New(io.Discard, "", 0)` to silence. A `nil` logger is ignored. | `log.Default()` |
 | `WithBackoff(min, max time.Duration)` | Restart backoff bounds. `min` is clamped to `[0, max]`; a `min` of `0` disables the initial delay. | `10ms`, `5s` |
 

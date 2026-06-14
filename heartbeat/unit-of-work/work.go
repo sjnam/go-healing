@@ -9,8 +9,8 @@ import (
 func DoWork(
 	ctx context.Context,
 	nums ...int,
-) (<-chan interface{}, <-chan int) {
-	heartbeat := make(chan interface{}, 1)
+) (<-chan any, <-chan int) {
+	heartbeat := make(chan any, 1)
 	intStream := make(chan int)
 	go func() {
 		defer close(heartbeat)

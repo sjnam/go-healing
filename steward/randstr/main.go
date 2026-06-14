@@ -26,8 +26,8 @@ func randStringFn(ctx context.Context) (healing.StartGoroutineFn, <-chan string)
 	return func(
 		ctx context.Context,
 		pulseInterval time.Duration,
-	) <-chan interface{} {
-		heartbeat := make(chan interface{})
+	) <-chan any {
+		heartbeat := make(chan any)
 		tmStream := make(chan string)
 
 		go func() {
@@ -89,7 +89,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(30*time.Second, func() {
-		log.Println("main: halting steward and ward.")
+		log.Println("\033[31mmain: halting steward and ward\033[0m")
 		cancel()
 	})
 
