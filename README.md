@@ -71,51 +71,51 @@ the context stops the steward even mid-wait.
 package main
 
 import (
-	"context"
-	"log"
-	"time"
+    "context"
+    "log"
+    "time"
 
-	"github.com/sjnam/healing"
+    "github.com/sjnam/healing"
 )
 
 // worker pulses every pulseInterval and occasionally "dies" to demonstrate
 // automatic recovery.
 func worker(ctx context.Context, pulseInterval time.Duration) <-chan any {
-	heartbeat := make(chan any)
-	go func() {
-		defer close(heartbeat)
-		pulse := time.NewTicker(pulseInterval)
-		defer pulse.Stop()
-		die := time.After(3 * time.Second) // simulate an occasional crash
+    heartbeat := make(chan any)
+    go func() {
+        defer close(heartbeat)
+        pulse := time.NewTicker(pulseInterval)
+        defer pulse.Stop()
+        die := time.After(3 * time.Second) // simulate an occasional crash
 
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-pulse.C:
-				select { // non-blocking send
-				case heartbeat <- struct{}{}:
-				default:
-				}
-			case <-die:
-				log.Println("worker: crashing")
-				return // closing the channel triggers a restart
-			}
-		}
-	}()
-	return heartbeat
+        for {
+            select {
+            case <-ctx.Done():
+                return
+            case <-pulse.C:
+                select { // non-blocking send
+                case heartbeat <- struct{}{}:
+                default:
+                }
+            case <-die:
+                log.Println("worker: crashing")
+                return // closing the channel triggers a restart
+            }
+        }
+    }()
+    return heartbeat
 }
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+    ctx, cancel := context.WithCancel(context.Background())
+    defer cancel()
 
-	steward := healing.NewSteward(2*time.Second, worker)
+    steward := healing.NewSteward(2*time.Second, worker)
 
-	// Drain the steward's own heartbeats; the ward is restarted under the hood.
-	for range steward(ctx, time.Second) {
-		log.Println("steward: alive")
-	}
+    // Drain the steward's own heartbeats; the ward is restarted under the hood.
+    for range steward(ctx, time.Second) {
+        log.Println("steward: alive")
+    }
 }
 ```
 
@@ -129,37 +129,37 @@ return `Bridge(ctx, that)`:
 
 ```go
 func workFn(ctx context.Context) (healing.StartGoroutineFn, <-chan string) {
-	chch := make(chan (<-chan string))
+    chch := make(chan (<-chan string))
 
-	startFn := func(ctx context.Context, pulse time.Duration) <-chan any {
-		heartbeat := make(chan any)
-		results := make(chan string)
-		go func() {
-			defer close(results)
-			defer close(heartbeat)
-			select {
-			case chch <- results: // hand this ward's results to the bridge
-			case <-ctx.Done():
-				return
-			}
-			// ... produce results, send heartbeats ...
-		}()
-		return heartbeat
-	}
+    startFn := func(ctx context.Context, pulse time.Duration) <-chan any {
+        heartbeat := make(chan any)
+        results := make(chan string)
+        go func() {
+            defer close(results)
+            defer close(heartbeat)
+            select {
+            case chch <- results: // hand this ward's results to the bridge
+            case <-ctx.Done():
+                return
+            }
+            // ... produce results, send heartbeats ...
+        }()
+        return heartbeat
+    }
 
-	return startFn, healing.Bridge(ctx, chch)
+    return startFn, healing.Bridge(ctx, chch)
 }
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+    ctx, cancel := context.WithCancel(context.Background())
+    defer cancel()
 
-	work, results := workFn(ctx)
-	healing.NewSteward(time.Second, work)(ctx, time.Hour)
+    work, results := workFn(ctx)
+    healing.NewSteward(time.Second, work)(ctx, time.Hour)
 
-	for r := range results { // uninterrupted across ward restarts
-		log.Println(r)
-	}
+    for r := range results { // uninterrupted across ward restarts
+        log.Println(r)
+    }
 }
 ```
 
@@ -179,7 +179,7 @@ closes when the context is cancelled or the ward force-stops.
 ### Options
 
 | Option | Description | Default |
-|--------|-------------|---------|
+| -------- | ------------- | --------- |
 | `WithCheckHeartbeat(fn func(any) Heartbeat)` | Validator that classifies each ward heartbeat as `Valid`/`Invalid`/`ForceStop`. A `nil` fn is ignored. | always `Valid` |
 | `WithLogger(l *log.Logger)` | Destination for the steward's diagnostic logs. Pass `log.New(io.Discard, "", 0)` to silence. A `nil` logger is ignored. | `log.Default()` |
 | `WithBackoff(min, max time.Duration)` | Restart backoff bounds. `min` is clamped to `[0, max]`; a `min` of `0` disables the initial delay. | `10ms`, `5s` |
@@ -198,11 +198,11 @@ or the source is exhausted. Used to consume ward results across restarts.
 Runnable programs live under [`steward/`](steward) and [`heartbeat/`](heartbeat):
 
 ```bash
-go run ./steward/randstr         # random strings, ward restarts on simulated errors
-go run ./steward/timevalue       # multiple concurrent stewards, custom validator, graceful shutdown
-go run ./steward/baseball [num]  # number-guessing game; num = target length (1–9)
-go run ./heartbeat/interval      # bare interval-based heartbeat
-go run ./heartbeat/unit-of-work  # heartbeat emitted per unit of work
+go run ./examples/steward/randstr         # random strings, ward restarts on simulated errors
+go run ./examples/steward/timevalue       # multiple concurrent stewards, custom validator, graceful shutdown
+go run ./examples/steward/baseball [num]  # number-guessing game; num = target length (1–9)
+go run ./examples/heartbeat/interval      # bare interval-based heartbeat
+go run ./examples/heartbeat/unit-of-work  # heartbeat emitted per unit of work
 ```
 
 `steward/timevalue` is the most complete reference: it shows a custom
